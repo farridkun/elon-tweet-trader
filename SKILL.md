@@ -40,24 +40,31 @@ When user asks to install or configure this skill:
    pip install simmer-sdk
    ```
 
-2. **Ask for Simmer API key**
+2. **Copy `.env.example` to `.env`** and fill in your values
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Ask for Simmer API key**
    - They can get it from simmer.markets/dashboard → SDK tab
    - Store in environment as `SIMMER_API_KEY`
 
-3. **Ask for wallet private key** (required for live trading)
+4. **Ask for wallet private key** (required for live trading)
    - This is the private key for their Polymarket wallet (the wallet that holds USDC)
    - Store in environment as `WALLET_PRIVATE_KEY`
    - The SDK uses this to sign orders client-side automatically — no manual signing needed
 
-4. **Ask about settings** (or confirm defaults)
+5. **Ask about settings** (or confirm defaults)
    - Max bucket sum: Combined price threshold (default 90¢)
    - Max position: Amount per bucket (default $5.00)
    - Bucket spread: How many neighbors to buy (default 1 = center ± 1)
    - Exit threshold: When to sell (default 65¢)
 
-5. **Save settings to config.json or environment variables**
+6. **No data source setup needed** — XTracker is public and automatic (see [Data Sources](#data-sources))
 
-6. **Set up cron** (disabled by default — user must enable scheduling)
+7. **Save settings to config.json or environment variables**
+
+8. **Set up cron** (disabled by default — user must enable scheduling)
 
 ## Configuration
 
@@ -71,9 +78,27 @@ When user asks to install or configure this skill:
 | Exit threshold | `SIMMER_ELON_EXIT` | `exit_threshold` | 0.65 | Sell when bucket price above this |
 | Slippage max | `SIMMER_ELON_SLIPPAGE_MAX` | `slippage_max_pct` | 0.05 | Skip trade if slippage exceeds this |
 | Min position | `SIMMER_ELON_MIN_POSITION` | `min_position_usd` | 2.00 | Floor for smart sizing (USD) |
-| Data source | `SIMMER_ELON_DATA_SOURCE` | `data_source` | xtracker | Data source (xtracker) |
+| Data source | `SIMMER_ELON_DATA_SOURCE` | `data_source` | xtracker | Where to fetch tweet counts (see [Data Sources](#data-sources)) |
 
 Config priority: config.json > environment variables > defaults.
+
+## Data Sources
+
+The `data_source` setting (env var `SIMMER_ELON_DATA_SOURCE`, config key `data_source`) controls where the skill fetches Elon Musk's real-time tweet count and projected pace. Currently only one source is supported:
+
+### `xtracker` (default — no setup required)
+
+[XTracker](https://xtracker.polymarket.com) is a **free, public** service built specifically for Polymarket tweet-count events. It tracks Elon's post count in real time and projects the final total based on current pace.
+
+- **No API key, account, or sign-up needed**
+- The skill calls `https://xtracker.polymarket.com/api/trackings` automatically
+- If XTracker shows an active tracking for the current tweet event, the skill uses its `projected_count` to find the right bucket cluster
+
+You **do not need to add or change anything** for this to work. The default value (`"xtracker"`) in `config.json` is already correct.
+
+If XTracker returns no active trackings, it usually means:
+- No tweet-count event is live right now (new events typically start Wednesday/Thursday)
+- XTracker hasn't picked up the new event yet — retry in a few hours
 
 ## Quick Commands
 
@@ -208,6 +233,11 @@ All trades are tagged with `source: "sdk:elon-tweets"`. This means:
 ```
 
 ## Troubleshooting
+
+**"What is `data_source` / `SIMMER_ELON_DATA_SOURCE`? Where do I get it?"**
+- `data_source` selects which service provides real-time tweet counts. The default (`xtracker`) is a **free public API** — no sign-up or API key needed
+- You don't need to set `SIMMER_ELON_DATA_SOURCE` unless you want to override the default
+- See the [Data Sources](#data-sources) section for details
 
 **"No XTracker trackings found"**
 - XTracker may not have active Elon tweet events
